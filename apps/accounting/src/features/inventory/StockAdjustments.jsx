@@ -378,6 +378,16 @@ const StockAdjustments = ({
       return;
     }
 
+    // Every row carries its own date, so every row is checked against the
+    // closed books — the form's check did not reach the upload.
+    for (const r of rows) {
+      const closed = blockIfClosed(db, companyId, r.date || form.date, 'This upload');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
+
     commit(rows, { date: form.date, reason: form.reason, warehouseId });
 
     if (errors.length) {
@@ -390,6 +400,14 @@ const StockAdjustments = ({
   };
 
   const removeAdjustment = (id) => {
+    // Removing moves stock back on the adjustment's own date, which may be in
+    // a closed period.
+    const adj = safeArray(db.stockAdjustments).find((a) => String(a.id) === String(id));
+    const closed = adj ? blockIfClosed(db, companyId, adj.date, 'This adjustment') : null;
+    if (closed) {
+      notify.error(closed);
+      return;
+    }
     setDb((prev) => ({
       ...prev,
       stockAdjustments: safeArray(prev.stockAdjustments).filter((a) => String(a.id) !== String(id)),

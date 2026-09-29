@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { postJournalToLedger } from '@ui/utils/journalSync';
+import { postJournalToLedger, reverseJournalOnLedger } from '@ui/utils/journalSync';
 import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { AlertTriangle, Check, ClipboardCheck, Download, MoreVertical, Package, PackageCheck, Pencil, Plus, Trash2, Truck, X } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '@ui/components/ui/Primitives';
@@ -18,6 +18,7 @@ import { DocDate } from '@ui/components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
 import { DocFormActions } from '@ui/components/DocumentForm';
 import { round2 } from '@ui/utils/money';
+import { blockIfClosed } from '@ui/utils/bookClose';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1532,6 +1533,11 @@ export const StockTransfersList = ({
         currentCompany={currentCompany}
         onCancel={() => openModal(null)}
         onConfirm={(received, note) => {
+          const closed = blockIfClosed(db, currentCompany?.id, transfer?.date, 'This transfer');
+          if (closed) {
+            notify.error(closed);
+            return;
+          }
           const byId = new Map(received.map((r) => [String(r.itemId), r.receivedQty]));
           const lines = safeArray(transfer?.lines).map((l) => {
             const key = normalizeId(l?.itemId);
@@ -1576,6 +1582,38 @@ export const StockTransfersList = ({
    * They lived inline in the row menu, which is why the document view could
    * not offer them: there was nothing to call.
    */
+  /*
+   * Undo the IGST journal a dispatched inter-state transfer posted.
+   *
+   * Submitting posts Dr Input IGST / Cr Output IGST to the ledger; rejecting
+   * or cancelling the transfer left that entry standing, on the server too.
+   * Reversed the way the journal list reverses — an opposite entry, never an
+   * erasure — and on the server first, so a refusal there stops the reject
+   * rather than leaving the two books apart. Returns false when it could not.
+   */
+  const reverseTransferGst = async (t) => {
+    const jid = t?.gstJournalId;
+    if (!jid) return true;
+    const journal = safeArray(db?.journalEntries).find(
+      (j) => j.companyId === currentCompany?.id && String(j.id) === String(jid)
+    );
+    if (!journal || String(journal.status || '').toUpperCase() === 'REVERSED') return true;
+    if (journal.backendEntryId) {
+      const { reversed } = await reverseJournalOnLedger(journal);
+      if (!reversed) return false;
+    }
+    setDb((prev) => ({
+      ...prev,
+      journalEntries: (prev.journalEntries || []).map((j) =>
+        j.companyId === currentCompany?.id && String(j.id) === String(jid) ? { ...j, status: 'REVERSED' } : j
+      ),
+      stockTransfers: (prev.stockTransfers || []).map((x) =>
+        normalizeId(x?.id) === normalizeId(t?.id) ? { ...x, gstJournalId: null, gstJournalReversedId: jid } : x
+      ),
+    }));
+    return true;
+  };
+
   const rejectTransfer = async (t) => {
     const ok = await confirmDialog({
       title: 'Reject this transfer?',
@@ -1583,6 +1621,7 @@ export const StockTransfersList = ({
       confirmLabel: 'Yes, reject',
     });
     if (!ok) return;
+    if (!(await reverseTransferGst(t))) return;
     updateStatus(t, TRANSFER_STATUS.REJECTED);
     notify.info(`Transfer ${t?.number || ''} rejected — the stock returns to ${locationLabel(t, 'source')}.`);
   };
@@ -1590,6 +1629,7 @@ export const StockTransfersList = ({
   const cancelTransfer = async (t) => {
     const ok = await confirmDialog({ title: 'Please confirm', message: 'Cancel this transfer?', confirmLabel: 'Yes, continue' });
     if (!ok) return;
+    if (!(await reverseTransferGst(t))) return;
     updateStatus(t, TRANSFER_STATUS.CANCELLED);
   };
 
@@ -1671,6 +1711,15 @@ export const StockTransfersList = ({
     if (!sourceWarehouseId) {
       notify.error('From Warehouse is required');
       return;
+    }
+
+    // Stock leaves on the transfer's date, which may already be closed.
+    {
+      const closed = blockIfClosed(db, currentCompany?.id, date, 'This transfer');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
     }
 
     const summary = computeInventorySummaryByItemId({ db, companyId: currentCompany?.id, fromDate: '', toDate: date, warehouseId: sourceWarehouseId });
