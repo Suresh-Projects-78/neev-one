@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { authorize } from '../middleware/rbac.js';
 import { ownDocsWhere } from '../services/access.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
@@ -113,6 +113,13 @@ paymentsRouter.get('/orgs/:orgId/payments', async (req, res) => {
   const { accountId, orgId, branchId } = req.tenant!;
   const direction = String(req.query.direction || 'RECEIPT') === 'PAYMENT' ? 'PAYMENT' : 'RECEIPT';
 
+  // Receipts and payments are two resources; the query says which is asked for.
+  // Deciding it here also records whether the caller is limited to their own
+  // documents, which the filter below reads.
+  const perms = permsFor(direction);
+  const refusal = await authorize(req, perms.module, PermissionAction.VIEW, perms.resource);
+  if (refusal) return res.status(refusal.status).json(refusal.body);
+
   const rows = await prisma.payment.findMany({
     where: {
       accountId,
@@ -139,12 +146,7 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
   // Permission depends on the direction, so it is checked here rather than as
   // route middleware.
   const perms = permsFor(body.direction);
-  const check = requirePermission(perms.module, PermissionAction.CREATE, perms.resource);
-  let allowed = true;
-  await new Promise<void>((resolve) => {
-    check(req, { status: () => ({ json: () => { allowed = false; resolve(); } }) } as any, () => resolve());
-  });
-  if (!allowed) {
+  if (await authorize(req, perms.module, PermissionAction.CREATE, perms.resource)) {
     return res.status(403).json({ error: `You do not have permission to create ${perms.resource.toLowerCase()}` });
   }
 
@@ -412,9 +414,24 @@ paymentsRouter.post('/orgs/:orgId/payments/:paymentId/reverse', async (req, res)
   if (!orgOk(req, res)) return;
   const { accountId, orgId, branchId } = req.tenant!;
 
-  const payment = await prisma.payment.findFirst({
-    where: { id: String(req.params.paymentId), accountId, orgId, ...ownDocsWhere(req) },
+  /*
+   * Reversing is the payment's cancellation, so it needs DELETE on the
+   * payment's own resource — the same right an invoice's cancellation asks
+   * for. This route used to ask for nothing: anyone in the company, a
+   * payroll clerk included, could reverse any receipt and its journal.
+   *
+   * The payment is read first because its direction decides the resource;
+   * a caller limited to their own documents then gets the same 404 as for a
+   * payment that does not exist.
+   */
+  const found = await prisma.payment.findFirst({
+    where: { id: String(req.params.paymentId), accountId, orgId },
   });
+  if (!found) return res.status(404).json({ error: 'Payment not found' });
+  const perms = permsFor(found.direction);
+  const refusal = await authorize(req, perms.module, PermissionAction.DELETE, perms.resource);
+  if (refusal) return res.status(refusal.status).json(refusal.body);
+  const payment = req.ownDocumentsOnly && found.createdByUserId !== req.auth!.userId ? null : found;
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
   if (payment.status === 'REVERSED') return res.status(409).json({ error: 'Already reversed' });
 
@@ -464,6 +481,11 @@ const reconcileSchema = z.object({
 paymentsRouter.patch('/orgs/:orgId/payments/:paymentId/reconcile', async (req, res) => {
   if (!orgOk(req, res)) return;
   const { accountId, orgId } = req.tenant!;
+
+  // Matching against the bank statement is bank work, whichever direction
+  // the money went.
+  const refusal = await authorize(req, 'CASHBANK', PermissionAction.EDIT, 'Bank Transactions');
+  if (refusal) return res.status(refusal.status).json(refusal.body);
 
   if (!(await isFeatureEnabled(accountId, orgId, 'bankReconciliation'))) {
     return res.status(400).json({ error: 'Bank reconciliation is switched off for this company' });
