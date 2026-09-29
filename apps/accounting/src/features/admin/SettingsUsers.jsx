@@ -858,7 +858,7 @@ export function SettingsUsers({ orgId }) {
                       {u.fullName || u.name}
                     </button>
                   </td>
-                  <td className="ui-col-entity px-4 py-3 ui-fg">{u.email}</td>
+                  <td className="ui-col-entity px-4 py-3 ui-fg" title={u.email}>{u.email}</td>
                   <td className="ui-col-meta px-4 py-3 ui-fg">{getRoleName(u.roleId)}</td>
                   <td className="ui-col-meta px-4 py-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${u.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>

@@ -13,7 +13,8 @@ import {
   ANTI_LOCKOUT_KEYS,
   LAST_ADMIN_ERROR,
   cannotGrantError,
-  countOtherAdmins,
+  LastAdminError,
+  assertAnAdminRemains,
   rolePermissionKeys,
   unheldGrants,
 } from '../services/roleGuards.js';
@@ -221,12 +222,6 @@ rolesRouter.patch('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', Pe
   const nextType = body.roleType ?? role.roleType;
   const isAdminRole = nextType === RoleType.ADMIN;
 
-  // Demoting the only Administrator role locks everybody out.
-  if (role.roleType === RoleType.ADMIN && !isAdminRole) {
-    if ((await countOtherAdmins(accountId, orgId, { roleId: role.id })) === 0) {
-      return res.status(409).json(LAST_ADMIN_ERROR);
-    }
-  }
 
   if (body.branchId && !(await branchBelongsToOrg(accountId, orgId, body.branchId))) {
     return res.status(400).json({ error: 'Branch does not belong to this organisation' });
@@ -270,44 +265,53 @@ rolesRouter.patch('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', Pe
 
   const idByKey = keys && keys.size ? await permissionIdsByKey() : new Map<string, string>();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.role.update({
-      where: { id: roleId },
-      data: {
-        ...('name' in body ? { name: body.name } : {}),
-        ...('description' in body ? { description: body.description ?? null } : {}),
-        ...('roleType' in body ? { roleType: body.roleType } : {}),
-        ...('branchId' in body ? { branchId: body.branchId ?? null } : {}),
-        ...(typeof body.ownDocumentsOnly === 'boolean' ? { ownDocumentsOnly: body.ownDocumentsOnly } : {}),
-      },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.role.update({
+        where: { id: roleId },
+        data: {
+          ...('name' in body ? { name: body.name } : {}),
+          ...('description' in body ? { description: body.description ?? null } : {}),
+          ...('roleType' in body ? { roleType: body.roleType } : {}),
+          ...('branchId' in body ? { branchId: body.branchId ?? null } : {}),
+          ...(typeof body.ownDocumentsOnly === 'boolean' ? { ownDocumentsOnly: body.ownDocumentsOnly } : {}),
+        },
+      });
 
-    if (!keys) return;
+      // Demoting an Administrator role takes administration from everybody who
+      // held it, directly or through a profile.
+      if (role.roleType === RoleType.ADMIN && !isAdminRole) await assertAnAdminRemains(tx, accountId, orgId);
 
-    /*
-     * Replace the set by diffing it. Clearing and re-inserting lost the field
-     * level on every permission the role kept, so a role edited on the Roles
-     * screen silently dropped back to level 0 everywhere the matrix had raised
-     * it.
-     */
-    const wantedIds = new Set([...keys].map((k) => idByKey.get(k)).filter(Boolean) as string[]);
-    const current = await tx.rolePermission.findMany({
-      where: { roleId },
-      select: { id: true, permissionId: true, allowed: true },
-    });
-    const currentByPermId = new Map(current.map((c) => [c.permissionId, c]));
+      if (!keys) return;
 
-    for (const permissionId of wantedIds) {
-      const existing = currentByPermId.get(permissionId);
-      if (!existing) {
-        await tx.rolePermission.create({ data: { accountId, orgId, roleId, permissionId, allowed: true } });
-      } else if (!existing.allowed) {
-        await tx.rolePermission.update({ where: { id: existing.id }, data: { allowed: true } });
+      /*
+       * Replace the set by diffing it. Clearing and re-inserting lost the field
+       * level on every permission the role kept, so a role edited on the Roles
+       * screen silently dropped back to level 0 everywhere the matrix had raised
+       * it.
+       */
+      const wantedIds = new Set([...keys].map((k) => idByKey.get(k)).filter(Boolean) as string[]);
+      const current = await tx.rolePermission.findMany({
+        where: { roleId },
+        select: { id: true, permissionId: true, allowed: true },
+      });
+      const currentByPermId = new Map(current.map((c) => [c.permissionId, c]));
+
+      for (const permissionId of wantedIds) {
+        const existing = currentByPermId.get(permissionId);
+        if (!existing) {
+          await tx.rolePermission.create({ data: { accountId, orgId, roleId, permissionId, allowed: true } });
+        } else if (!existing.allowed) {
+          await tx.rolePermission.update({ where: { id: existing.id }, data: { allowed: true } });
+        }
       }
-    }
-    const toRemove = current.filter((c) => !wantedIds.has(c.permissionId)).map((c) => c.id);
-    if (toRemove.length) await tx.rolePermission.deleteMany({ where: { id: { in: toRemove } } });
-  });
+      const toRemove = current.filter((c) => !wantedIds.has(c.permissionId)).map((c) => c.id);
+      if (toRemove.length) await tx.rolePermission.deleteMany({ where: { id: { in: toRemove } } });
+    });
+  } catch (err) {
+    if (err instanceof LastAdminError) return res.status(409).json(LAST_ADMIN_ERROR);
+    throw err;
+  }
 
   const full = await roleWithPermissions(roleId);
   res.json({ role: full });
@@ -352,18 +356,19 @@ rolesRouter.delete('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', P
     });
   }
 
-  // With nobody assigned, an ADMIN role cannot be anybody's last one; but an
-  // org must not end up with no Administrator role at all to assign.
-  if (role.roleType === RoleType.ADMIN) {
-    const otherAdminRoles = await prisma.role.count({ where: { accountId, orgId, roleType: RoleType.ADMIN, NOT: { id: role.id } } });
-    if (otherAdminRoles === 0) return res.status(409).json(LAST_ADMIN_ERROR);
+  try {
+    await prisma.$transaction(async (tx) => {
+      // RoleProfileRole has no relation to Role, so it does not cascade.
+      await tx.roleProfileRole.deleteMany({ where: { accountId, orgId, roleId: role.id } });
+      await tx.role.delete({ where: { id: role.id } });
+      // Nobody holds it directly, but a profile may — and its holders would
+      // lose administration with it.
+      if (role.roleType === RoleType.ADMIN) await assertAnAdminRemains(tx, accountId, orgId);
+    });
+  } catch (err) {
+    if (err instanceof LastAdminError) return res.status(409).json(LAST_ADMIN_ERROR);
+    throw err;
   }
-
-  await prisma.$transaction(async (tx) => {
-    // RoleProfileRole has no relation to Role, so it does not cascade.
-    await tx.roleProfileRole.deleteMany({ where: { accountId, orgId, roleId: role.id } });
-    await tx.role.delete({ where: { id: role.id } });
-  });
 
   await prisma.auditLog.create({
     data: {

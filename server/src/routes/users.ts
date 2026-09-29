@@ -20,6 +20,8 @@ import {
   unheldGrants,
   userIsAdmin,
   wouldRemoveLastAdmin,
+  LastAdminError,
+  assertAnAdminRemains,
 } from '../services/roleGuards.js';
 
 export const usersRouter = Router();
@@ -72,11 +74,11 @@ async function assignmentRefusal(
   // adds to it and cannot demote anybody.
   if (scopeBranchId) return null;
 
+  // Whether the organisation still has an administrator afterwards is checked
+  // inside the assignment's own transaction: the person may stay one through
+  // a role profile, which a prediction made here would have to reimplement.
   const targetIsAdmin = await userIsAdmin(accountId, orgId, userId);
-  if (!targetIsAdmin) return null;
-  if (!req.isAdmin) return { status: 403, body: ADMIN_ONLY_ERROR };
-  if (role?.roleType === RoleType.ADMIN) return null;
-  if (await wouldRemoveLastAdmin(accountId, orgId, userId)) return { status: 409, body: LAST_ADMIN_ERROR };
+  if (targetIsAdmin && !req.isAdmin) return { status: 403, body: ADMIN_ONLY_ERROR };
   return null;
 }
 
@@ -263,6 +265,7 @@ usersRouter.put('/users/:userId/companies', requirePermission('SETTINGS', Permis
     ...(toRemove.length
       ? [
           prisma.userRoleAssignment.deleteMany({ where: { accountId, userId, orgId: { in: toRemove } } }),
+          prisma.userRoleProfile.deleteMany({ where: { accountId, userId, orgId: { in: toRemove } } }),
           prisma.userOrgMembership.deleteMany({ where: { accountId, userId, orgId: { in: toRemove } } }),
         ]
       : []),
@@ -292,15 +295,21 @@ usersRouter.put('/orgs/:orgId/users/:userId/role', requirePermission('SETTINGS',
   const refused = await assignmentRefusal(req, accountId, orgId, userId, role, null);
   if (refused) return res.status(refused.status).json(refused.body);
 
-  await prisma.$transaction(async (tx) => {
-    // Clear org-wide roles
-    await tx.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: null } });
-    if (role) {
-      await tx.userRoleAssignment.create({
-        data: { accountId, orgId, branchId: null, userId, roleId: role.id, createdByUserId },
-      });
-    }
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Clear org-wide roles
+      await tx.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: null } });
+      if (role) {
+        await tx.userRoleAssignment.create({
+          data: { accountId, orgId, branchId: null, userId, roleId: role.id, createdByUserId },
+        });
+      }
+      await assertAnAdminRemains(tx, accountId, orgId);
+    });
+  } catch (err) {
+    if (err instanceof LastAdminError) return res.status(409).json(LAST_ADMIN_ERROR);
+    throw err;
+  }
 
   res.json({ ok: true });
 });
@@ -647,6 +656,9 @@ usersRouter.delete('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', P
 
   // Remove user from this org (do not delete the global user record)
   await prisma.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId } });
+  // Profiles too: a profile left behind is a set of roles waiting to come back
+  // the moment anybody re-adds this person.
+  await prisma.userRoleProfile.deleteMany({ where: { accountId, orgId, userId } });
   await prisma.userWarehouseAccess.deleteMany({ where: { accountId, orgId, userId } });
   await prisma.userBranchMembership.deleteMany({ where: { accountId, orgId, userId } });
   await prisma.userOrgMembership.deleteMany({ where: { accountId, orgId, userId } });
@@ -751,8 +763,10 @@ usersRouter.post('/orgs/:orgId/users/:userId/roles', requirePermission('SETTINGS
       await tx.userRoleAssignment.create({
         data: { accountId, orgId, branchId: scopeBranchId, userId, roleId: role.id, createdByUserId },
       });
+      await assertAnAdminRemains(tx, accountId, orgId);
     });
   } catch (err: any) {
+    if (err instanceof LastAdminError) return res.status(409).json(LAST_ADMIN_ERROR);
     // If the client sent duplicates or raced, keep endpoint idempotent.
     if (!(String(err?.name || '') === 'PrismaClientKnownRequestError' && String(err?.code || '') === 'P2002')) throw err;
   }
