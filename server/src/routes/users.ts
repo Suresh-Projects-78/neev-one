@@ -9,6 +9,9 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { sendTemplate } from '../services/mailer.js';
 import { RoleType } from '../constants/enums.js';
+import { resolveAccess, resolveUserPermissions } from '../services/access.js';
+import { permKey } from '../constants/permissionCatalog.js';
+import { NO_FIT, SuggestionError, roleSuggestionEnabled, suggestRole } from '../services/roleSuggestion.js';
 import {
   ADMIN_ONLY_ERROR,
   LAST_ADMIN_ERROR,
@@ -300,6 +303,120 @@ usersRouter.put('/orgs/:orgId/users/:userId/role', requirePermission('SETTINGS',
   });
 
   res.json({ ok: true });
+});
+
+/** Whether the role suggestion is switched on here, so the screen can offer it. */
+usersRouter.get('/orgs/:orgId/users/role-suggestion', requirePermission('SETTINGS', PermissionAction.VIEW, 'Users'), async (req, res) => {
+  if (String(req.params.orgId) !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
+  res.json({ enabled: roleSuggestionEnabled() });
+});
+
+const suggestionSchema = z.object({
+  jobTitle: z.string().trim().min(2).max(80),
+  duties: z.string().trim().max(500).optional().default(''),
+});
+
+/**
+ * Suggests one of the roles the caller may hand out, from a job title and a
+ * line about the work. See services/roleSuggestion.ts for what is sent where.
+ *
+ * Candidates are only the roles this caller could assign — never an
+ * Administrator role for a non-administrator, never a role holding something
+ * the caller does not — so a suggestion can always be accepted.
+ */
+usersRouter.post('/orgs/:orgId/users/role-suggestion', requirePermission('SETTINGS', PermissionAction.EDIT, 'Users'), async (req, res) => {
+  const accountId = req.tenant!.accountId;
+  const orgId = String(req.params.orgId);
+  if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
+  const body = suggestionSchema.parse(req.body);
+
+  const roles = await prisma.role.findMany({
+    where: { accountId, orgId, branchId: null },
+    select: { id: true, name: true, description: true, roleType: true },
+  });
+  const grants = await prisma.rolePermission.findMany({
+    where: { roleId: { in: roles.map((r) => r.id) }, allowed: true },
+    select: { roleId: true, permission: { select: { module: true, subModule: true, action: true } } },
+  });
+  const keysByRole = new Map<string, string[]>();
+  for (const g of grants) {
+    const list = keysByRole.get(g.roleId) || [];
+    list.push(permKey(g.permission.module, g.permission.subModule, g.permission.action));
+    keysByRole.set(g.roleId, list);
+  }
+  const assignable = roles.filter(
+    (r) => (r.roleType !== RoleType.ADMIN || req.isAdmin) && unheldGrants(req, keysByRole.get(r.id) || []).length === 0
+  );
+
+  try {
+    const s = await suggestRole(body, assignable);
+    const nameOf = new Map(assignable.map((r) => [r.id, r.name]));
+    res.json({
+      roleId: s.choice === NO_FIT ? null : s.choice,
+      noFit: s.choice === NO_FIT,
+      confidence: s.confidence,
+      alternatives: s.ranked.slice(0, 3).map((r) => ({ roleId: r.id, name: nameOf.get(r.id), probability: r.probability })),
+    });
+  } catch (err) {
+    if (err instanceof SuggestionError) return res.status(err.status).json({ error: err.message, code: 'suggestion_unavailable' });
+    throw err;
+  }
+});
+
+/**
+ * What one person can do in this company: every role they hold (org-wide,
+ * per branch, or through a profile) and the permissions those add up to.
+ *
+ * The Users table shows one role per person, the org-wide one, which was the
+ * only answer the product gave to "what can this person do?". A branch role
+ * or a role profile could grant far more and was visible nowhere.
+ */
+usersRouter.get('/orgs/:orgId/users/:userId/access', requirePermission('SETTINGS', PermissionAction.VIEW, 'Users'), async (req, res) => {
+  const accountId = req.tenant!.accountId;
+  const orgId = String(req.params.orgId);
+  const userId = String(req.params.userId);
+  if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
+  if (!(await isMember(accountId, orgId, userId))) return res.status(404).json({ error: 'User not found in org' });
+
+  // No branch: every assignment counts, wherever it applies.
+  const access = await resolveAccess(accountId, orgId, userId);
+
+  const [direct, profiles, branches] = await Promise.all([
+    prisma.userRoleAssignment.findMany({
+      where: { accountId, orgId, userId },
+      select: { branchId: true, role: { select: { id: true, name: true, roleType: true, ownDocumentsOnly: true } } },
+    }),
+    prisma.userRoleProfile.findMany({
+      where: { accountId, orgId, userId },
+      select: { profile: { select: { id: true, name: true, roles: { select: { roleId: true } } } } },
+    }),
+    prisma.branch.findMany({ where: { accountId, orgId }, select: { id: true, branchName: true } }),
+  ]);
+  const branchName = new Map(branches.map((b) => [b.id, b.branchName]));
+
+  const profileRoleIds = [...new Set(profiles.flatMap((p) => p.profile.roles.map((r) => r.roleId)))];
+  const profileRoles = profileRoleIds.length
+    ? await prisma.role.findMany({ where: { id: { in: profileRoleIds } }, select: { id: true, name: true, roleType: true } })
+    : [];
+
+  const restrictions = await resolveUserPermissions(accountId, orgId, userId);
+
+  res.json({
+    isAdmin: access.isAdmin,
+    ownDocumentsOnly: access.ownDocumentsOnly,
+    roles: [
+      ...direct.map((a) => ({
+        ...a.role,
+        scope: a.branchId ? `Branch: ${branchName.get(a.branchId) || a.branchId}` : 'Whole company',
+      })),
+      ...profileRoles.map((r) => ({
+        ...r,
+        scope: `Profile: ${profiles.find((p) => p.profile.roles.some((x) => x.roleId === r.id))?.profile.name || ''}`,
+      })),
+    ],
+    permissions: Array.from(access.permissions).sort(),
+    restrictions: Object.fromEntries([...restrictions].map(([type, ids]) => [type, ids.size])),
+  });
 });
 
 usersRouter.post('/orgs/:orgId/users/:userId/password', requirePermission('SETTINGS', PermissionAction.EDIT, 'Users'), async (req, res) => {

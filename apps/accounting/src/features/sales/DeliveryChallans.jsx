@@ -24,6 +24,7 @@ import { useDocumentFormKeys } from '@ui/components/ui/useDocumentFormKeys';
 import { getVisibleCustomFields } from '@ui/utils/invoicePrefs';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '@ui/components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -528,9 +529,9 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
         });
       }}
       primary={
-        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+        <PermissionButton permission="SALES::Delivery Challans::CREATE" type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
           <Plus size={16} aria-hidden="true" /> New Challan
-        </button>
+        </PermissionButton>
       }
       cards={[
         { label: 'Challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },

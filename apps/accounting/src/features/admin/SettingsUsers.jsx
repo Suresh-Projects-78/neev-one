@@ -18,6 +18,11 @@ import { listUsers,
 import Modal from '@ui/components/ui/Modal';
 import Popover from '@ui/components/ui/Popover';
 import { useFeatures } from '@ui/permissions/useFeatures';
+import { rbacErrorMessage } from '@ui/permissions/rbacErrors';
+import RoleSelect from './RoleSelect';
+import UserAccessPanel from './UserAccessPanel';
+import RoleSuggest from './RoleSuggest';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 const normalizeId = (v) => String(v ?? '').trim();
 
@@ -194,7 +199,7 @@ export function SettingsUsers({ orgId }) {
       closeCreate();
       await loadData();
     } catch (err) {
-      setError(err.message || 'Failed to create user');
+      setError(rbacErrorMessage(err, 'Failed to create user'));
     } finally {
       setSaving(false);
     }
@@ -245,7 +250,7 @@ export function SettingsUsers({ orgId }) {
       await setUserCompanies(companiesModalUser.id, companiesChecked);
       closeCompanies();
     } catch (err) {
-      setError(err?.message || 'Failed to save company access');
+      setError(rbacErrorMessage(err, 'Failed to save company access'));
     } finally {
       setCompaniesSaving(false);
     }
@@ -310,7 +315,7 @@ export function SettingsUsers({ orgId }) {
       await deleteUser(orgId, id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch (err) {
-      setError(err.message || 'Failed to remove user');
+      setError(rbacErrorMessage(err, 'Failed to remove user'));
     }
   };
 
@@ -356,7 +361,7 @@ export function SettingsUsers({ orgId }) {
       await loadData();
       cancelEdit();
     } catch (err) {
-      setError(err.message || 'Failed to update user');
+      setError(rbacErrorMessage(err, 'Failed to update user'));
     } finally {
       setEditSaving(false);
     }
@@ -395,13 +400,13 @@ export function SettingsUsers({ orgId }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="ui-t-sec">Users</div>
-        <button
+        <PermissionButton permission="SETTINGS::Users::CREATE"
           type="button"
           onClick={openCreate}
           className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           + Create User
-        </button>
+        </PermissionButton>
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -485,6 +490,10 @@ export function SettingsUsers({ orgId }) {
               <div className="ui-detail-value ui-detail-mono">{selectedUser.id || '—'}</div>
             </div>
           </div>
+          <section aria-label="What this person can do" className="pt-3" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+            <div className="ui-t-sec mb-2">What they can do</div>
+            <UserAccessPanel key={selectedUser.id} orgId={orgId} userId={selectedUser.id} />
+          </section>
         </div>
       ) : null}
 
@@ -509,25 +518,15 @@ export function SettingsUsers({ orgId }) {
               </div>
               <div>
                 <label className="ui-label" htmlFor="settingsusers-role">Role</label>
-                <select id="settingsusers-role"
-                  className="ui-select w-full ui-surface"
+                <RoleSelect
+                  id="settingsusers-role"
+                  roles={assignableRoles}
                   value={form.roleId}
-                  onChange={(e) => {
-                    if (e.target.value === '__new__') {
-                      setNewRoleDraft('');
-                      return;
-                    }
-                    onChange('roleId')(e);
-                  }}
-                >
-                  <option value="">— No role —</option>
-                  {assignableRoles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                  <option value="__new__">+ Create new role…</option>
-                </select>
+                  onChange={(roleId) => setForm((p) => ({ ...p, roleId }))}
+                  allowCreate
+                  onCreateNew={() => setNewRoleDraft('')}
+                />
+                <RoleSuggest orgId={orgId} onPick={(roleId) => setForm((p) => ({ ...p, roleId }))} />
                 {newRoleDraft !== null ? (
                   <div className="mt-2 flex items-center gap-2">
                     <input
@@ -798,18 +797,12 @@ export function SettingsUsers({ orgId }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="ui-label" htmlFor="settingsusers-role-2">Role</label>
-              <select id="settingsusers-role-2"
-                className="ui-select w-full ui-surface"
+              <RoleSelect
+                id="settingsusers-role-2"
+                roles={assignableRoles}
                 value={editForm.roleId}
-                onChange={(e) => setEditForm((p) => ({ ...p, roleId: e.target.value }))}
-              >
-                <option value="">— No role —</option>
-                {assignableRoles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(roleId) => setEditForm((p) => ({ ...p, roleId }))}
+              />
             </div>
             <div>
               <label className="ui-label" htmlFor="settingsusers-status">Status</label>
@@ -929,13 +922,13 @@ export function SettingsUsers({ orgId }) {
                           >
                             Change Password
                           </button>
-                          <button
+                          <PermissionButton permission="SETTINGS::Users::DELETE"
                             type="button"
                             onClick={() => removeUser(u.id)}
                             className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]"
                           >
                             Delete
-                          </button>
+                          </PermissionButton>
                         </Popover>
                       ) : null}
                     </div>

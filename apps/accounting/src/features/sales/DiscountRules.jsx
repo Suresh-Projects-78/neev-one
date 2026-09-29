@@ -5,6 +5,7 @@ import { ListToolbar, exportRows, useListSearch } from '@ui/components/ListToolb
 import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { patchMaster, removeMaster, saveMaster } from '@ui/utils/masterSync';
 import { getCustomerDisplayName } from '@ui/utils/contacts';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 /**
  * Discount rules — every discount type the sales team asks for, one engine:
@@ -201,9 +202,9 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           entity="tax"
           title="Discount Rules"
         />
-        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+        <PermissionButton permission="MASTERS::Masters::CREATE" type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
           <Plus size={16} aria-hidden="true" /> New Rule
-        </button>
+        </PermissionButton>
       </div>
 
       {open ? (

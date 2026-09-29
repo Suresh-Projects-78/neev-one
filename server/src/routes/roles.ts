@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
-import { isKnownPermission, permKey } from '../constants/permissionCatalog.js';
+import { isKnownPermission, permKey, roleGroup } from '../constants/permissionCatalog.js';
 import { ROLE_DELETED_PREFIX, ensureDefaultRoles } from '../services/defaultRoles.js';
 import { ensurePermissionCatalog } from './permissions.js';
 import {
@@ -144,6 +144,7 @@ rolesRouter.get('/orgs/:orgId/roles', requirePermission('SETTINGS', PermissionAc
   const rolesWithCounts = roles.map((r) => ({
     ...r,
     assignedUsersCount: countByRoleId.get(r.id) || 0,
+    group: roleGroup(r),
   }));
 
   res.json({ roles: rolesWithCounts });
@@ -233,15 +234,23 @@ rolesRouter.patch('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', Pe
 
   let keys: Set<string> | null = null;
   if ('permissions' in body && body.permissions) {
+    const held = await rolePermissionKeys(role.id);
     const wanted = wantedKeys(body.permissions);
-    if (wanted.unknown.length) {
-      return res.status(400).json({ error: `Unknown permission: ${wanted.unknown[0]}`, permissions: wanted.unknown });
+    /*
+     * A key the role already holds but the catalogue no longer knows is
+     * dropped, not refused. The Roles screen used to offer nine such keys;
+     * roles saved then carry them, and refusing them would make those roles
+     * impossible to edit at all. A key the role does not hold yet is still
+     * refused — that is somebody trying to grant something that is not real.
+     */
+    const newlyUnknown = wanted.unknown.filter((k) => !held.has(k));
+    if (newlyUnknown.length) {
+      return res.status(400).json({ error: `Unknown permission: ${newlyUnknown[0]}`, permissions: newlyUnknown });
     }
     keys = wanted.keys;
 
     // Only permissions newly added need to be held by the grantor; a role may
     // always be trimmed.
-    const held = await rolePermissionKeys(role.id);
     const added = [...keys].filter((k) => !held.has(k));
     const missing = unheldGrants(req, added);
     if (missing.length) return res.status(403).json(cannotGrantError(missing));

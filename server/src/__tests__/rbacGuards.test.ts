@@ -396,6 +396,41 @@ describe('deleting a role', () => {
   });
 });
 
+describe('roles holding keys the catalogue has retired', () => {
+  it('drops them on save instead of refusing the whole role, and still refuses new ones', async () => {
+    const role = await request(app)
+      .post(`/api/orgs/${owner.orgId}/roles`)
+      .set(auth(owner))
+      .send({ name: `Legacy ${uid()}`, permissions: ['SALES::Invoices::VIEW'] })
+      .expect(201);
+    const id = role.body.role.id;
+
+    // What the old Roles screen wrote: a key no route checks.
+    const legacy =
+      (await prisma.permission.findFirst({ where: { module: 'PAYMENTS', subModule: 'Receipts', action: 'VIEW' } })) ||
+      (await prisma.permission.create({ data: { module: 'PAYMENTS', subModule: 'Receipts', action: 'VIEW' } }));
+    await prisma.rolePermission.create({
+      data: { accountId: role.body.role.accountId, orgId: owner.orgId, roleId: id, permissionId: legacy.id, allowed: true },
+    });
+
+    // The Roles form sends everything it loaded back.
+    await request(app)
+      .patch(`/api/orgs/${owner.orgId}/roles/${id}`)
+      .set(auth(owner))
+      .send({ permissions: ['SALES::Invoices::VIEW', 'SALES::Invoices::CREATE', 'PAYMENTS::Receipts::VIEW'] })
+      .expect(200);
+    const after = await request(app).get(`/api/orgs/${owner.orgId}/roles/${id}/permissions`).set(auth(owner)).expect(200);
+    expect(after.body.permissions.sort()).toEqual(['SALES::Invoices::CREATE', 'SALES::Invoices::VIEW']);
+
+    // Now that it is gone, it is new again, and refused.
+    await request(app)
+      .patch(`/api/orgs/${owner.orgId}/roles/${id}`)
+      .set(auth(owner))
+      .send({ permissions: ['SALES::Invoices::VIEW', 'PAYMENTS::Receipts::VIEW'] })
+      .expect(400);
+  });
+});
+
 describe('editing a role on the Roles screen', () => {
   it('keeps the field levels the matrix set on permissions the role retains', async () => {
     const role = await request(app)

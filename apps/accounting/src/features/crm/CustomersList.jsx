@@ -12,6 +12,7 @@ import { getCustomerDisplayName } from '@ui/utils/contacts';
 import { formatMoney } from '@ui/utils/money';
 import { isGstRegistered, outstandingByParty, standingOf } from '@ui/utils/partyStanding';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 /**
  * The customer master.
@@ -227,9 +228,9 @@ export default function CustomersList({ db, setDb, currentCompany, onNewTransact
         });
       }}
       primary={
-        <button type="button" onClick={() => setIsCreating(true)} className="ui-btn ui-btn-primary">
+        <PermissionButton permission="MASTERS::Customers::CREATE" type="button" onClick={() => setIsCreating(true)} className="ui-btn ui-btn-primary">
           <Plus size={16} aria-hidden="true" /> New Customer
-        </button>
+        </PermissionButton>
       }
       cards={[
         { label: 'Customers', value: custHeadline.count, count: true, tone: 'draft', Icon: Users },
