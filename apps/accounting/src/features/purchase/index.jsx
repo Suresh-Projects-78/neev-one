@@ -331,7 +331,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       const next = { ...nextItems[index], [field]: value };
 
       if (field === 'itemId') {
-        const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
+        const item = pickedItem || itemsMaster.find((i) => String(i.id) === String(value));
         if (item) {
           const resolved = resolvePurchaseRate({
             db,
@@ -2087,7 +2087,7 @@ export const PurchaseOrderForm = ({
       const next = { ...nextItems[index], [field]: value };
 
       if (field === 'itemId') {
-        const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
+        const item = pickedItem || itemsMaster.find((i) => String(i.id) === String(value));
         if (item) {
           next.description = item.name;
           next.rate = Number(item.purchasePrice ?? 0);
@@ -3004,6 +3004,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
       try {
         const saved = await createDocApi('bill', {
           number: bill.number || undefined,
+          warehouseId: String(bill.warehouseId || '').trim() || undefined,
           date: bill.date,
           dueDate: bill.dueDate || null,
           refNo: bill.refNo || null,
@@ -3589,7 +3590,7 @@ export const DebitNoteForm = ({
           const qty = Number(line.quantity ?? 1);
           const rate = Number(line.rate ?? 0);
           const itemId = line.itemId !== undefined && line.itemId !== null ? String(line.itemId) : '';
-          const master = itemId ? itemsMaster.find((i) => i.id === parseInt(itemId)) : null;
+          const master = itemId ? itemsMaster.find((i) => String(i.id) === String(itemId)) : null;
           const gstRate = Number(master?.gstRate ?? line.gstRate ?? 0);
           const hsnSac = master?.hsnSac || line.hsnSac || '';
           return {
@@ -3694,7 +3695,7 @@ export const DebitNoteForm = ({
       const qty = Number(line.remainingQty) || 0;
       const rate = Number(line.rate ?? 0);
       const itemId = line.itemId !== undefined && line.itemId !== null ? String(line.itemId) : '';
-      const master = itemId ? itemsMaster.find((i) => i.id === parseInt(itemId)) : null;
+      const master = itemId ? itemsMaster.find((i) => String(i.id) === String(itemId)) : null;
       const gstRate = Number(master?.gstRate ?? line.gstRate ?? 0);
       const hsnSac = master?.hsnSac || line.hsnSac || '';
       return {
@@ -3751,7 +3752,7 @@ export const DebitNoteForm = ({
     const nextItems = [...formData.items];
 
     if (field === 'itemId') {
-      const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
+      const item = pickedItem || itemsMaster.find((i) => String(i.id) === String(value));
       if (item) {
         nextItems[index] = {
           ...nextItems[index],
@@ -3933,6 +3934,7 @@ export const DebitNoteForm = ({
       try {
         const saved = await createDocApi('debitNote', {
           number: debitNumber || undefined,
+          warehouseId: String(formData.warehouseId || originalBill?.warehouseId || '').trim() || undefined,
           date: formData.date,
           againstDocId: originalBill?.backendDocId ? String(originalBill.backendDocId) : null,
           partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,

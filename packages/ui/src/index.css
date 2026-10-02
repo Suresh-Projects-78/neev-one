@@ -2784,16 +2784,16 @@
   /*
    * No-wrap columns end in an ellipsis instead of running into the next cell.
    *
-   * ResizableTables sets `table-layout: fixed` on every table so columns can be
-   * dragged. Fixed layout divides the width evenly and never grows a column
-   * for its content, so a long email in a no-wrap cell was painted straight
-   * over the Role column beside it. Clipping is safe on these four roles —
-   * they hold text, not menus — and the column can still be widened by hand.
+   * A table somebody has resized runs in fixed layout (see ResizableTables),
+   * which never grows a column for its content, so a long email in a no-wrap
+   * cell would be painted over the column beside it. Clipping is safe on these
+   * four roles — they hold text, not menus, and never money — and the column
+   * can be widened by hand. Tables nobody has resized size to their content.
    */
-  table[data-column-resize-ready='true'] .ui-col-entity,
-  table[data-column-resize-ready='true'] .ui-col-meta,
-  table[data-column-resize-ready='true'] .ui-col-date,
-  table[data-column-resize-ready='true'] .ui-col-id {
+  table[data-column-resize-ready='true'][style*='fixed'] .ui-col-entity,
+  table[data-column-resize-ready='true'][style*='fixed'] .ui-col-meta,
+  table[data-column-resize-ready='true'][style*='fixed'] .ui-col-date,
+  table[data-column-resize-ready='true'][style*='fixed'] .ui-col-id {
     overflow: hidden;
     text-overflow: ellipsis;
   }

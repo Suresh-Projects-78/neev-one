@@ -17,6 +17,8 @@ import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
 import { SettledDocument, assertPurchaseDocRemovable } from '../services/settledDocGuard.js';
+import { refuseUnknownLineItems } from '../services/lineItems.js';
+import { InsufficientStock, withStockCheck } from '../services/stockLedger.js';
 
 /**
  * Bills, credit notes and debit notes.
@@ -145,6 +147,9 @@ const docSchema = z.object({
   status: z.string().optional(),
   category: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+  /** Where the goods came in, or went back out. Dropped before, so every
+      purchase landed in no warehouse at all. */
+  warehouseId: z.string().optional().nullable(),
   items: z.array(itemSchema).default([]),
 });
 
@@ -267,6 +272,7 @@ function register(kind: DocKind) {
       const { accountId, orgId, branchId } = req.tenant!;
       const userId = req.auth!.userId;
       const body = docSchema.parse(req.body);
+      if (await refuseUnknownLineItems(res, req.tenant!.accountId, req.tenant!.orgId, body.items)) return;
 
       await ensureLedgerSetup(accountId, orgId, userId);
 
@@ -287,17 +293,25 @@ function register(kind: DocKind) {
 
       await ensureDefaultSeries({ accountId, orgId, branchId, docType: kind, userId });
 
-      const created = await prisma.$transaction(async (tx) => {
+      let created: any;
+      try {
+      created = await prisma.$transaction(async (tx) => {
         const number =
           String(body.number || '').trim() ||
           (await allocateNumber(tx as any, { accountId, orgId, branchId, docType: kind, userId, date: body.date }))
             .number;
 
-        return (tx as any)[cfg.model].create({
+        /* A debit note sends goods back out: checked like a sale. Bills and
+           credit notes only bring stock in, so they pass straight through. */
+        return withStockCheck<any>(
+          tx,
+          { orgId, lines: cfg.model === 'debitNote' ? body.items : [], warehouseId: body.warehouseId },
+          () => (tx as any)[cfg.model].create({
           data: {
             accountId,
             orgId,
             branchId,
+            warehouseId: String(body.warehouseId || '').trim() || null,
             number,
             date: body.date,
             dueDate: body.dueDate ?? null,
@@ -324,8 +338,13 @@ function register(kind: DocKind) {
             createdByUserId: userId,
             ...(cfg.extraData ? cfg.extraData(body) : {}),
           },
-        });
+          })
+        );
       });
+      } catch (e: any) {
+        if (e instanceof InsufficientStock) return res.status(e.status).json({ error: e.message, code: e.code, shortages: e.shortages });
+        throw e;
+      }
 
       // Posting failure removes the document: the books and the list must not
       // disagree.
@@ -398,6 +417,7 @@ function register(kind: DocKind) {
       }
 
       const body = docSchema.parse(req.body);
+      if (await refuseUnknownLineItems(res, req.tenant!.accountId, req.tenant!.orgId, body.items)) return;
       const baseCurrency = await baseCurrencyFor(accountId, orgId);
       const docCurrency = String(body.currency || doc.currency || baseCurrency).toUpperCase();
       let fxRate = 1;
@@ -425,9 +445,15 @@ function register(kind: DocKind) {
               );
             }
 
-            const row = await (tx as any)[cfg.model].update({
+            const nextWarehouseId =
+              body.warehouseId === undefined ? doc.warehouseId ?? null : String(body.warehouseId || '').trim() || null;
+            const row = await withStockCheck<any>(
+              tx,
+              { orgId, lines: cfg.model === 'debitNote' ? body.items : [], warehouseId: nextWarehouseId },
+              () => (tx as any)[cfg.model].update({
               where: { id: doc.id },
               data: {
+                warehouseId: nextWarehouseId,
                 number,
                 date: body.date,
                 dueDate: body.dueDate ?? null,
@@ -453,7 +479,8 @@ function register(kind: DocKind) {
                 baseTotal: new Prisma.Decimal(toBase(num(body.total), fxRate).toFixed(2)),
                 ...(cfg.extraData ? cfg.extraData(body) : {}),
               },
-            });
+              })
+            );
 
             await postEntry(
               {
@@ -485,6 +512,7 @@ function register(kind: DocKind) {
         );
         res.json({ document: normalize(updated) });
       } catch (e: any) {
+        if (e instanceof InsufficientStock) return res.status(e.status).json({ error: e.message, code: e.code, shortages: e.shortages });
         if (String(e?.code) === 'P2002') return res.status(409).json({ error: `Number ${number} is already used` });
         return res.status(Number(e?.status || 400)).json({ error: `Not saved: ${String(e?.message || e)}` });
       }

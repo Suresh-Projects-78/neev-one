@@ -204,7 +204,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     setForm((p) => {
       const items = [...p.items];
       if (field === 'itemId') {
-        const item = picked || itemsMaster.find((i) => i.id === parseInt(value));
+        const item = picked || itemsMaster.find((i) => String(i.id) === String(value));
         if (item) {
           // onDate is the order's own date, so a price list that had expired
           // by then does not price it.
