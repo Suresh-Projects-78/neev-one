@@ -9,6 +9,9 @@ export const getProfile = () =>
  * from first and last rather than sent, because two writers for one displayed
  * string is how they end up disagreeing.
  */
+/** Everything held about the signed-in person, as JSON (server: GET /auth/me/export). */
+export const exportMyData = () => apiFetch('/auth/me/export', { skipBranchHeader: true, skipWarehouseHeader: true });
+
 export const updateProfile = (patch) =>
   apiFetch('/auth/me', {
     method: 'PATCH',

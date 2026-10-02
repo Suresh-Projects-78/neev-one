@@ -8,6 +8,7 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { sendTemplate } from '../services/mailer.js';
+import { revokeAllSessions } from '../services/auth.js';
 import { RoleType } from '../constants/enums.js';
 import { resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { permKey } from '../constants/permissionCatalog.js';
@@ -122,6 +123,36 @@ usersRouter.get('/orgs/:orgId/users', requirePermission('SETTINGS', PermissionAc
   res.json({ users });
 });
 
+/**
+ * May this caller change this person's sign-in identity — email or password?
+ *
+ * Both are global: one User signs in to every company they belong to. Checking
+ * only that the person is a member of the caller's company let the admin of
+ * any company that had invited somebody reset that person's password, or move
+ * their email to an address the admin controls and then use "forgot password"
+ * — taking over the person's own companies too.
+ *
+ * So: only for people whose home is this account (created here, not invited
+ * in from elsewhere), and an Administrator's identity only by an
+ * Administrator. Everyone else changes their own, from their profile.
+ * Returns the refusal to send, or null.
+ */
+async function identityChangeRefusal(req: any, accountId: string, orgId: string, userId: string) {
+  if (userId === req.auth!.userId) return null;
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { accountId: true } });
+  if (!target || target.accountId !== accountId) {
+    return {
+      status: 403,
+      body: {
+        error: 'This person signs in with their own account. Only they can change its email or password.',
+        code: 'foreign_identity',
+      },
+    };
+  }
+  if (!req.isAdmin && (await userIsAdmin(accountId, orgId, userId))) return { status: 403, body: ADMIN_ONLY_ERROR };
+  return null;
+}
+
 usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', PermissionAction.EDIT, 'Users'), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
@@ -141,6 +172,11 @@ usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', Pe
     if (await wouldRemoveLastAdmin(accountId, orgId, userId)) return res.status(409).json(LAST_ADMIN_ERROR);
   }
 
+  if ('email' in body && body.email) {
+    const refusal = await identityChangeRefusal(req, accountId, orgId, userId);
+    if (refusal) return res.status(refusal.status).json(refusal.body);
+  }
+
   // Same global-uniqueness rule as user creation: login resolves by email
   // across every account, so an email may not be moved onto a taken address.
   if ('email' in body && body.email) {
@@ -155,7 +191,8 @@ usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', Pe
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
-      ...('email' in body ? { email: body.email!.toLowerCase() } : {}),
+      // A changed address has not been proven by anyone yet.
+      ...('email' in body ? { email: body.email!.toLowerCase(), emailVerifiedAt: null } : {}),
       ...('fullName' in body ? { fullName: body.fullName! } : {}),
       ...('isActive' in body ? { isActive: Boolean(body.isActive) } : {}),
     },
@@ -442,6 +479,9 @@ usersRouter.post('/orgs/:orgId/users/:userId/password', requirePermission('SETTI
   const member = await prisma.userOrgMembership.findFirst({ where: { accountId, orgId, userId }, select: { id: true } });
   if (!member) return res.status(404).json({ error: 'User not found in org' });
 
+  const refusal = await identityChangeRefusal(req, accountId, orgId, userId);
+  if (refusal) return res.status(refusal.status).json(refusal.body);
+
   const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
   const passwordHash = await bcrypt.hash(body.password, rounds);
 
@@ -450,6 +490,8 @@ usersRouter.post('/orgs/:orgId/users/:userId/password', requirePermission('SETTI
     data: { passwordHash },
     select: { id: true },
   });
+  // Whoever held the old password is signed out everywhere.
+  await revokeAllSessions(userId, 'ADMIN_PASSWORD_RESET');
 
   await prisma.auditLog.create({
     data: {

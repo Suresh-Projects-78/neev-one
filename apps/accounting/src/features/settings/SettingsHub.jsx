@@ -32,7 +32,7 @@ const SettingsCard = ({ category, onOpen }) => {
     >
       <span
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg"
-        style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--brand))' }}
+        style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--brand-ink))' }}
         aria-hidden="true"
       >
         <Icon size={18} />

@@ -277,7 +277,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
                 <div className="flex items-center justify-between gap-3">
                   <span
                     className="grid place-items-center w-9 h-9 rounded-lg"
-                    style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand))' }}
+                    style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand-ink))' }}
                   >
                     <app.icon size={18} aria-hidden="true" />
                   </span>
@@ -310,7 +310,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
               <article key={title} className="ui-stat">
                 <span
                   className="grid place-items-center w-9 h-9 rounded-lg"
-                  style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand))' }}
+                  style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand-ink))' }}
                 >
                   <Icon size={18} aria-hidden="true" />
                 </span>
@@ -335,7 +335,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
               <li key={title}>
                 <span
                   className="ui-display text-5xl"
-                  style={{ color: 'rgb(var(--brand))' }}
+                  style={{ color: 'rgb(var(--brand-ink))' }}
                   aria-hidden="true"
                 >
                   {String(i + 1).padStart(2, '0')}
@@ -374,7 +374,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
                 <BadgeCheck
                   size={18}
                   className="mt-0.5 flex-shrink-0"
-                  style={{ color: 'rgb(var(--brand))' }}
+                  style={{ color: 'rgb(var(--brand-ink))' }}
                   aria-hidden="true"
                 />
                 <span className="text-sm leading-relaxed">{line}</span>

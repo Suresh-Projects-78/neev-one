@@ -554,11 +554,11 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 {cart.map((c) => (
                   <div key={c.itemId} className="flex items-center gap-2 text-sm">
                     <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                    <button type="button" onClick={() => bump(c.itemId, -1)} className="ui-icon-btn !h-7 !w-7" aria-label="Less"><Minus size={12} /></button>
+                    <button type="button" onClick={() => bump(c.itemId, -1)} className="ui-icon-btn !h-7 !w-7" aria-label={`Decrease quantity of ${c.name}`}><Minus size={12} aria-hidden="true" /></button>
                     <span className="w-6 text-center">{c.qty}</span>
-                    <button type="button" onClick={() => bump(c.itemId, 1)} className="ui-icon-btn !h-7 !w-7" aria-label="More"><Plus size={12} /></button>
+                    <button type="button" onClick={() => bump(c.itemId, 1)} className="ui-icon-btn !h-7 !w-7" aria-label={`Increase quantity of ${c.name}`}><Plus size={12} aria-hidden="true" /></button>
                     <span className="ui-col-amount w-20 text-right">{formatMoney(c.qty * c.rate, currentCompany)}</span>
-                    <button type="button" onClick={() => drop(c.itemId)} className="ui-icon-btn" aria-label="Remove"><X size={12} /></button>
+                    <button type="button" onClick={() => drop(c.itemId)} className="ui-icon-btn" aria-label={`Remove ${c.name}`}><X size={12} aria-hidden="true" /></button>
                   </div>
                 ))}
               </div>

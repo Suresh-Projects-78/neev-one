@@ -204,7 +204,7 @@ export function PartyFormLayout({
                   onClick={fetchFromGstin}
                   disabled={gstinFetching}
                   className="ui-btn ui-btn-secondary shrink-0"
-                  style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+                  style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))' }}
                 >
                   <Search size={14} aria-hidden="true" />
                   {gstinFetching ? 'Fetching…' : 'Fetch from GSTIN'}

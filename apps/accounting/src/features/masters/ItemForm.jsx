@@ -777,7 +777,7 @@ const ItemForm = ({
                   className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
                   style={{ backgroundColor: 'rgb(var(--brand) / 0.06)' }}
                 >
-                  <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand))' }} />
+                  <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand-ink))' }} />
                   Opening stock will be recorded in the selected branch and warehouse.
                 </p>
 

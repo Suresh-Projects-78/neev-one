@@ -2612,7 +2612,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany, onOpenLedger = 
                           <button
                             type="button"
                             onClick={() => onOpenLedger?.(String(a.id))}
-                            className="font-semibold text-left text-[rgb(var(--brand))] hover:underline"
+                            className="font-semibold text-left text-[rgb(var(--brand-ink))] hover:underline"
                           >
                             {a.name}
                           </button>
@@ -3587,7 +3587,7 @@ export const ChartAccountForm = ({
                         }
                       }}
                       className="ui-btn ui-btn-secondary shrink-0"
-                      style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+                      style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))' }}
                     >
                       <Search size={14} aria-hidden="true" />
                       {gstinFetching ? 'Fetching…' : 'Fetch from GSTIN'}
@@ -3835,7 +3835,7 @@ export const ChartAccountForm = ({
               type="button"
               onClick={(e) => handleSubmit(e, 'new')}
               className="ui-btn ui-btn-secondary"
-              style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+              style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))' }}
             >
               Save and New
             </button>
@@ -6834,7 +6834,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
                   <tr key={u.id} className="ui-hover-sunken">
                     <td className="px-4 py-2.5 ui-col-entity">{u.name}</td>
                     <td className="px-4 py-2.5 text-right">
-                      <button type="button" onClick={() => deleteUom(u.id)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
+                      <button type="button" onClick={() => deleteUom(u.id)} aria-label={`Delete unit ${u.name}`} title="Delete" className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -7342,7 +7342,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
                   <tr key={r.id} className="ui-hover-sunken">
                     <td className="px-4 py-2.5 ui-col-entity">{Number(r.rate)}%</td>
                     <td className="px-4 py-2.5 text-right">
-                      <button type="button" onClick={() => deleteRate(r.id)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
+                      <button type="button" onClick={() => deleteRate(r.id)} aria-label={`Delete ${Number(r.rate)}% rate`} title="Delete" className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -10949,7 +10949,7 @@ const GstComplianceWorkspace = ({ db, currentCompany, branches = [], initialRepo
           <div className="min-w-[17rem] flex-1 sm:flex-none"><label className="ui-label" htmlFor="gst-report-select">Select Report</label><select id="gst-report-select" className="ui-select w-full font-semibold" value={report} onChange={(e) => setReport(e.target.value)}>{GST_REPORT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
           <div><label className="ui-label" htmlFor="gst-branch">Branch</label><select id="gst-branch" className="ui-select" value={branchId} onChange={(e) => setBranchId(e.target.value)}><option value="">All branches</option>{branches.map((branch) => <option key={branch.id} value={String(branch.id)}>{branch.name}</option>)}</select></div>
           <div><label className="ui-label" htmlFor="gst-gstin">GSTIN</label><input id="gst-gstin" className="ui-input ui-mono w-44" value={currentCompany.gstin || 'Not configured'} readOnly /></div>
-          <button type="button" className="ui-btn ui-btn-primary">Apply</button>
+          {/* No Apply button: the report and branch take effect as they are chosen. One sat here that did nothing when pressed. */}
         </div>
       </section>
 
@@ -14257,7 +14257,7 @@ const AppShell = () => {
             >
               <PanelLeftOpen size={18} aria-hidden="true" />
             </button>
-            <Building2 size={18} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
+            <Building2 size={18} style={{ color: 'rgb(var(--brand-ink))' }} aria-hidden="true" />
 
             {availableOrgs.length > 1 ? (
               <div className="relative" ref={orgMenuRef}>
@@ -14288,7 +14288,7 @@ const AppShell = () => {
                           role="menuitem"
                           onClick={() => switchOrg(o.orgId)}
                           className="w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-[rgb(var(--surface-sunken))] flex items-center justify-between gap-2"
-                          style={isActive ? { color: 'rgb(var(--accent))', fontWeight: 600 } : undefined}
+                          style={isActive ? { color: 'rgb(var(--brand-ink))', fontWeight: 600 } : undefined}
                         >
                           <span className="truncate">{o.org?.name || o.orgId}</span>
                           {isActive ? <Check size={14} aria-hidden="true" /> : null}

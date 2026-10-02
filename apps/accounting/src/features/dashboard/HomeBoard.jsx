@@ -127,7 +127,7 @@ export function QuickLinks({ links }) {
   return (
     <section className="ui-card p-4" aria-label="Quick links">
       <div className="flex items-center gap-2">
-        <LayoutGrid size={16} aria-hidden="true" style={{ color: 'rgb(var(--brand))' }} />
+        <LayoutGrid size={16} aria-hidden="true" style={{ color: 'rgb(var(--brand-ink))' }} />
         <h2 className="ui-t-sec">Quick Links</h2>
       </div>
 
@@ -171,7 +171,7 @@ export function RevenueExpenses({ months, peak, company, any }) {
       <div className="mt-2 flex items-center gap-4 text-sm">
         {[
           { label: 'Revenue', color: TONES.green.solid },
-          { label: 'Expenses', color: 'rgb(var(--brand))' },
+          { label: 'Expenses', color: 'rgb(var(--brand-ink))' },
         ].map((l) => (
           <span key={l.label} className="ui-muted inline-flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color }} aria-hidden="true" />
@@ -241,7 +241,7 @@ export function CashFlowPanel({ moneyIn, moneyOut, company, label }) {
         </div>
         <div className="flex items-center justify-between gap-3">
           <dt className="ui-muted text-sm">Money out</dt>
-          <dd className="ui-money" style={{ color: 'rgb(var(--brand))' }}>{formatMoney(moneyOut, company)}</dd>
+          <dd className="ui-money" style={{ color: 'rgb(var(--brand-ink))' }}>{formatMoney(moneyOut, company)}</dd>
         </div>
       </dl>
 
