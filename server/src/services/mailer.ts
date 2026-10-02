@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { prisma } from '../utils/prisma.js';
 import { TEMPLATE_BY_KEY, render } from '../constants/emailTemplates.js';
+import { isDevOrTest } from '../utils/devMode.js';
 
 /**
  * Sending mail.
@@ -34,7 +35,8 @@ const APP_URL = process.env.APP_URL || 'http://localhost:5173';
  * JWT_SECRET so a single-secret deployment still works.
  */
 function encryptionKey() {
-  const secret = process.env.MAIL_SECRET_KEY || process.env.JWT_SECRET || 'dev-secret';
+  const secret = process.env.MAIL_SECRET_KEY || process.env.JWT_SECRET || (isDevOrTest() ? 'dev-secret' : '');
+  if (!secret) throw new Error('MAIL_SECRET_KEY (or JWT_SECRET) must be set to store credentials.');
   return createHash('sha256').update(String(secret)).digest();
 }
 
@@ -213,6 +215,19 @@ export async function sendTemplate(opts: SendOptions) {
   return deliver(row.id, opts.accountId, opts.orgId);
 }
 
+/**
+ * The message with any link token taken out.
+ *
+ * Reset and verification tokens are stored only as hashes, so a database
+ * copy cannot be used to take over an account — but the outbox kept the
+ * rendered email, live link and all, in plain text in the database and every
+ * backup. Once the message has gone, the stored copy keeps the shape of the
+ * link and loses the secret. A message still waiting to be retried keeps it;
+ * those tokens expire on their own (30 minutes, 24 hours).
+ */
+export const withoutLinkTokens = (text: string) =>
+  String(text || '').replace(/([?&](?:token|share)=)[^\s&"'<>]+/gi, '$1[removed-after-sending]');
+
 /** Attempts delivery of one outbox row and records the result. */
 export async function deliver(outboxId: string, accountId?: string | null, orgId?: string | null) {
   const row = await prisma.emailOutbox.findUnique({ where: { id: outboxId } });
@@ -235,7 +250,15 @@ export async function deliver(outboxId: string, accountId?: string | null, orgId
 
     return prisma.emailOutbox.update({
       where: { id: row.id },
-      data: { status: 'SENT', sentAt: new Date(), attempts: { increment: 1 }, lastError: null },
+      data: {
+        status: 'SENT',
+        sentAt: new Date(),
+        attempts: { increment: 1 },
+        lastError: null,
+        // Delivered: the stored copy no longer needs the working link.
+        bodyText: withoutLinkTokens(row.bodyText),
+        ...(row.bodyHtml ? { bodyHtml: withoutLinkTokens(row.bodyHtml) } : {}),
+      },
     });
   } catch (e: any) {
     return prisma.emailOutbox.update({

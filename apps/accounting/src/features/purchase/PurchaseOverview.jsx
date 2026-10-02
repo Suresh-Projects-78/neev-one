@@ -507,7 +507,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                 {[
                   { label: 'Billed', color: 'rgb(var(--ov-blue))' },
                   { label: 'Paid', color: 'rgb(var(--ov-green))' },
-                  { label: 'Payable', color: 'rgb(var(--brand))' },
+                  { label: 'Payable', color: 'rgb(var(--brand-ink))' },
                 ].map((l) => (
                   <span key={l.label} className="inline-flex items-center gap-2 ui-muted">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: l.color }} aria-hidden="true" />

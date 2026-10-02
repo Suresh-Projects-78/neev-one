@@ -1196,7 +1196,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       </td>
                       <td className="ui-col-amount px-3 py-2">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
                       <td className="px-3 py-2">
-                        <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
+                        <button type="button" onClick={() => removeItem(idx)} aria-label={`Remove line ${idx + 1}`} title="Remove line" className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                           <Trash2 size={16} />
                         </button>
                       </td>

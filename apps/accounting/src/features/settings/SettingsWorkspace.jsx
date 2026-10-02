@@ -54,7 +54,7 @@ const LocalNavItem = ({ item, selected, onSelect }) => {
         size={16}
         aria-hidden="true"
         className="shrink-0"
-        style={selected ? { color: 'rgb(var(--brand))' } : undefined}
+        style={selected ? { color: 'rgb(var(--brand-ink))' } : undefined}
       />
       <span className={selected ? 'truncate font-medium' : 'ui-muted truncate'}>{item.title}</span>
     </button>

@@ -16,10 +16,10 @@ export const login = ({ email, password }) =>
   apiFetch('/auth/login', { method: 'POST', body: { email, password }, skipAuth: true });
 
 /* The server calls it `name`; sending `fullName` was a silent 400. */
-export const signup = ({ email, password, fullName, mobile }) =>
+export const signup = ({ email, password, fullName, noticeVersion }) =>
   apiFetch('/auth/signup', {
     method: 'POST',
-    body: { email, password, name: fullName, ...(mobile ? { mobile } : {}) },
+    body: { email, password, name: fullName, ...(noticeVersion ? { noticeVersion } : {}) },
     skipAuth: true,
   });
 
