@@ -266,11 +266,11 @@ model Role {
   // Optional: branch-scoped custom role
   branchId  String?
 
-  name        String
-  description String?
+  name             String
+  description      String?
   // Stored as a string rather than a Postgres enum: adding a value to an enum
   // is a migration, and these lists grow. (ADMIN | ACCOUNTANT | SALES | CUSTOM)
-  roleType    String
+  roleType         String
   // Limits list and single-document reads to rows the holder created
   // (Odoo "Own Documents Only"). One unrestricted role lifts it.
   ownDocumentsOnly Boolean @default(false)
@@ -492,6 +492,39 @@ model BankDateAudit {
 /// A stock document the browser raised — an adjustment or an inter-branch
 /// transfer — kept on the server so every device and user sees one set.
 ///
+/// Every quantity that moved, one row per document line.
+///
+/// Written by database triggers (migration 20260930090000_stock_ledger)
+/// whenever an invoice, bill, credit note, debit note, stock document or item
+/// is written, from that row's own content — so no route, import, script or
+/// recurring run can move stock without it landing here, and a document's
+/// rows are always exactly what the document now says. Never written by the
+/// application.
+///
+/// `qty` is signed: in is positive, out negative. On hand for an item in a
+/// warehouse is the sum of its rows there, plus rows that name no warehouse
+/// (see services/stockLedger.ts onHand). Only STOCK items count;
+/// that is decided when reading, so changing an item's type needs no rebuild.
+model StockMovement {
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  accountId   String
+  orgId       String
+  branchId    String?
+  warehouseId String?
+  itemId      String
+  date        String
+  qty         Decimal
+  /// OPENING | INVOICE | BILL | CREDIT_NOTE | DEBIT_NOTE | ADJUSTMENT | TRANSFER
+  sourceKind  String
+  sourceId    String
+  sourceNo    String?
+  lineNo      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, itemId, warehouseId])
+  @@index([sourceKind, sourceId])
+}
+
 /// The browser still computes stock from its documents, as it does from
 /// invoices and bills; this table makes those documents shared and durable.
 /// Identity across devices is `uid` (local ids do not travel). The columns are
@@ -1888,8 +1921,12 @@ model ItemMaster {
   salePrice     Decimal @default(0)
   purchasePrice Decimal @default(0)
 
-  openingQty   Decimal @default(0)
-  reorderLevel Decimal @default(0)
+  openingQty         Decimal @default(0)
+  /// Where the opening quantity sits. Null for items saved before this
+  /// existed: their opening counts against whichever warehouse is asked,
+  /// as the browser has always treated it.
+  openingWarehouseId String?
+  reorderLevel       Decimal @default(0)
 
   /// Batch and serial tracking, gated by the batchSerial feature.
   trackBy String @default("NONE") // NONE | BATCH | SERIAL

@@ -9,7 +9,7 @@ import { notify } from '@ui/components/ui/notify';
 import { useFieldErrors } from '@ui/components/ui/useFieldErrors';
 import { useFeatures } from '@ui/permissions/useFeatures';
 import { bumpItemCodeSeries, nextItemCode } from '@ui/utils/itemCode';
-import { saveItemToServer } from '@ui/utils/itemSync';
+import { saveItemToServer, updateItemOnServer } from '@ui/utils/itemSync';
 import { formatMoney, round2 } from '@ui/utils/money';
 
 /**
@@ -283,6 +283,9 @@ const ItemForm = ({
         // keep legacy field in sync (older screens/data)
         stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : Number(existing?.stock ?? 0) || 0,
       };
+
+      // Written through: the server counts opening stock from the item.
+      await updateItemOnServer(updated);
 
       setDb({
         ...db,

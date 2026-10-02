@@ -198,6 +198,10 @@ if [ "${1:-}" = "--api" ]; then
     # on reload; this points them at the server id where it can be told for
     # certain and reports the rest. Idempotent.
     npx tsx scripts/backfillLineItemIds.ts --fix
+    # The stock ledger is kept by triggers; this proves it matches every
+    # document, printing and rebuilding anything that does not. After the
+    # line repair above, whose rewrites the triggers have just followed.
+    npx tsx scripts/verifyStockLedger.ts --fix
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi

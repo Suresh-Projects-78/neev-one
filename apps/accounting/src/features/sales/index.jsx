@@ -11,6 +11,7 @@ import { addDays, dueDateFor, termsLabel } from '@ui/utils/paymentTerms';
 import { plusDaysIso, todayIso } from '@ui/utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '@ui/api/invoices';
+import { useServerOnHand } from '@ui/hooks/useServerOnHand';
 import { useFeatures } from '@ui/permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } from '@ui/api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '@ui/utils/einvoice';
@@ -3218,6 +3219,22 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   }, [db, currentCompany.id, formData.warehouseId]);
 
   /*
+   * The server's count, where it has one: it sees the sale made at the next
+   * counter a minute ago, which this browser's documents do not. An item the
+   * server does not know (saved on this device only) keeps the local count.
+   */
+  const serverOnHand = useServerOnHand(
+    useMemo(() => (formData.items || []).map((l) => l?.itemId), [formData.items]),
+    formData.warehouseId
+  );
+  const availableFor = (itemId) => {
+    const key = String(itemId);
+    const master = items.find((i) => String(i.id) === key);
+    if (serverOnHand && master?.backendItemId) return serverOnHand.get(key) ?? 0;
+    return availableByItemId.get(key) ?? 0;
+  };
+
+  /*
    * Which cells the operator has typed into by hand, per line.
    *
    * Choosing an item fills the description, rate, tax and HSN from the master
@@ -4786,7 +4803,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       item on it.
                     */}
                     {item.itemId && lineMaster && isStockItem(lineMaster) ? (() => {
-                      const available = Number(availableByItemId.get(String(item.itemId)) ?? 0);
+                      const available = Number(availableFor(item.itemId));
                       const wanted = Number(item.quantity ?? 0);
                       const short = Number.isFinite(wanted) && wanted > available;
                       const unit = String(lineMaster.unit || '').trim();
@@ -6318,6 +6335,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       try {
         const saved = await createDocApi('creditNote', {
           number: creditNumber || undefined,
+          warehouseId: String(formData.warehouseId || originalInvoice?.warehouseId || '').trim() || undefined,
           date: formData.date,
           againstDocId: originalInvoice?.backendInvoiceId ? String(originalInvoice.backendInvoiceId) : null,
           partyId: customer?.backendPartyId ? String(customer.backendPartyId) : null,

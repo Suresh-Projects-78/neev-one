@@ -60,6 +60,9 @@ const mapCommon = (d, companyId, idKey) => ({
   items: Array.isArray(d.items) ? d.items : [],
   placeOfSupplyState: d.placeOfSupplyState || '',
   taxType: d.taxType || '',
+  /* Stock is counted per warehouse; a document arriving without one moved
+     stock nowhere on this device's inventory screen. */
+  warehouseId: d.warehouseId || '',
   createdAt: d.createdAt,
   hydratedFromServer: true,
 });
@@ -109,6 +112,7 @@ const mapItem = (it, companyId) => ({
   salePrice: num(it.salePrice),
   purchasePrice: num(it.purchasePrice),
   openingQty: num(it.openingQty),
+  openingWarehouseId: it.openingWarehouseId || '',
   stock: num(it.openingQty),
   reorderLevel: num(it.reorderLevel),
   trackingType: String(it.trackBy || 'NONE').toUpperCase(),

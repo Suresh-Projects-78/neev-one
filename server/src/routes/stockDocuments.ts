@@ -184,7 +184,8 @@ stockDocumentsRouter.put('/orgs/:orgId/stock-documents/:kind/:uid', async (req, 
   }
   if (!existing && newLock) {
     const raisedAt = Date.parse(String((body.payload as any)?.createdAt || ''));
-    const predatesClose = Number.isFinite(raisedAt) && raisedAt <= newLock.updatedAt.getTime();
+    // Strictly before: a document stamped the same millisecond as the close cannot claim to predate it.
+    const predatesClose = Number.isFinite(raisedAt) && raisedAt < newLock.updatedAt.getTime();
     if (!predatesClose) return res.status(409).json(lockedError(newLock.lockedThrough));
   }
 

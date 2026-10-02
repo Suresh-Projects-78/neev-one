@@ -115,7 +115,7 @@ beforeAll(async () => {
   owner = await makeOwner();
   await bankId();
   const item = async (name: string) =>
-    (await request(app).post(`/api/orgs/${owner.orgId}/items`).set(auth(owner)).send({ name, unit: 'Pcs', gstRate: 18 }).expect(201)).body.item.id as string;
+    (await request(app).post(`/api/orgs/${owner.orgId}/items`).set(auth(owner)).send({ name, unit: 'Pcs', gstRate: 18, openingQty: 1000 }).expect(201)).body.item.id as string;
   I1 = await item('Widget');
   I2 = await item('Gadget');
 });

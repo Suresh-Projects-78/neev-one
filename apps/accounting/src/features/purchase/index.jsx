@@ -3004,6 +3004,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
       try {
         const saved = await createDocApi('bill', {
           number: bill.number || undefined,
+          warehouseId: String(bill.warehouseId || '').trim() || undefined,
           date: bill.date,
           dueDate: bill.dueDate || null,
           refNo: bill.refNo || null,
@@ -3933,6 +3934,7 @@ export const DebitNoteForm = ({
       try {
         const saved = await createDocApi('debitNote', {
           number: debitNumber || undefined,
+          warehouseId: String(formData.warehouseId || originalBill?.warehouseId || '').trim() || undefined,
           date: formData.date,
           againstDocId: originalBill?.backendDocId ? String(originalBill.backendDocId) : null,
           partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,

@@ -38,7 +38,7 @@ async function makeOwner(name: string): Promise<Ctx> {
 }
 
 const item = async (c: Ctx, name: string) =>
-  (await request(app).post(`/api/orgs/${c.orgId}/items`).set(auth(c)).send({ name, unit: 'Kg', gstRate: 0 }).expect(201)).body.item.id as string;
+  (await request(app).post(`/api/orgs/${c.orgId}/items`).set(auth(c)).send({ name, unit: 'Kg', gstRate: 0, openingQty: 100 }).expect(201)).body.item.id as string;
 
 const invoice = (c: Ctx, items: any[]) =>
   request(app)

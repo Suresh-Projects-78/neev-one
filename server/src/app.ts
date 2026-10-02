@@ -57,6 +57,7 @@ import { batchSerialRouter } from './routes/batchSerial.js';
 import { paymentsRouter } from './routes/payments.js';
 import { gstinRouter } from './routes/gstin.js';
 import { stockDocumentsRouter } from './routes/stockDocuments.js';
+import { stockLedgerRouter } from './routes/stockLedger.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -161,6 +162,7 @@ export function buildApp() {
   app.use('/api', branchesRouter);
   app.use('/api', warehousesRouter);
   app.use('/api', stockDocumentsRouter);
+  app.use('/api', stockLedgerRouter);
   app.use('/api', rolesRouter);
   app.use('/api', usersRouter);
   app.use('/api', transfersRouter);
